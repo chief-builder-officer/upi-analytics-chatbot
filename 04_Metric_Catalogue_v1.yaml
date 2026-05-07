@@ -1,0 +1,332 @@
+# =============================================================================
+# PULSE — Metric Catalogue v1
+# Companion to 01_Strategy_UPI_Analytics_Agent.md (§3.4)
+# Format: each metric is a YAML object the LLM agent's metric router can match.
+# Stored as code, version-controlled in /metrics/, owned by Director Data Products.
+# =============================================================================
+
+version: 1
+last_updated: 2026-05-05
+owner: director_data_products
+total_metrics: 25
+
+# -----------------------------------------------------------------------------
+# 1. VOLUME & GROWTH
+# -----------------------------------------------------------------------------
+metrics:
+
+  - name: upi_txn_count
+    display_name: "UPI Transaction Count (TPD when daily)"
+    description: |
+      Count of all UPI transactions reaching a terminal state, regardless of
+      success or failure. The number that explains "are we busy?".
+    owner: vp_payments_data
+    sla: { freshness: 15_minutes, accuracy_tolerance_pp: 0.0 }
+    formula:
+      source: fct_upi_txn
+      measure: count(*)
+    dimensions: [dt, hour, txn_type, flow_type, payer_bank, city, app_version]
+    related_metrics: [upi_gmv, mau_upi]
+    version: v2
+
+  - name: upi_gmv
+    display_name: "UPI GMV"
+    description: "Sum of successful UPI transaction amounts. P2M + P2P combined unless filtered."
+    owner: vp_payments_data
+    sla: { freshness: 15_minutes }
+    formula:
+      source: fct_upi_txn
+      filter: is_success = 1
+      measure: sum(amount)
+    dimensions: [dt, txn_type, merchant_category, city, payer_bank]
+    version: v3
+
+  - name: upi_avg_ticket_size
+    display_name: "Average Ticket Size (AOV)"
+    description: "GMV ÷ successful txn count. Sensitive to merchant mix."
+    owner: vp_payments_data
+    formula:
+      source: fct_upi_txn
+      filter: is_success = 1
+      measure: sum(amount) / count(*)
+    dimensions: [dt, txn_type, merchant_category, city]
+    version: v1
+
+  - name: mau_upi
+    display_name: "Monthly Active UPI Users"
+    description: "Distinct payer_user_sk with ≥1 successful UPI txn in the trailing 30 days."
+    owner: vp_growth
+    formula:
+      source: fct_upi_user_day
+      filter: is_active = 1
+      measure: count(distinct user_sk)
+      window: trailing_30_days
+    dimensions: [dt, cohort_month, city, kyc_level]
+    version: v2
+
+  - name: dau_upi
+    display_name: "Daily Active UPI Users"
+    description: "Distinct payer_user_sk active on a given day."
+    owner: vp_growth
+    formula:
+      source: fct_upi_user_day
+      filter: is_active = 1
+      measure: count(distinct user_sk)
+    dimensions: [dt]
+    version: v1
+
+  - name: new_user_first_txn
+    display_name: "New users completing first UPI txn"
+    description: |
+      Distinct users whose FIRST successful UPI txn fell in the period.
+      Used as the activation north-star.
+    owner: vp_growth
+    formula:
+      source: fct_upi_txn
+      filter: is_success = 1 AND first_txn_for_user = 1
+      measure: count(distinct payer_user_sk)
+    dimensions: [dt, signup_channel, cohort_month, city]
+    version: v3
+
+  - name: stickiness_dau_mau
+    display_name: "Stickiness (DAU/MAU)"
+    description: "Daily-active divided by monthly-active. Industry healthy band: 18-25%."
+    owner: vp_growth
+    formula:
+      compose:
+        numerator: dau_upi
+        denominator: mau_upi
+    dimensions: [dt]
+    version: v1
+
+
+# -----------------------------------------------------------------------------
+# 2. QUALITY & RELIABILITY
+# -----------------------------------------------------------------------------
+
+  - name: upi_success_rate
+    display_name: "UPI Success Rate"
+    description: |
+      % of UPI debit transactions reaching SUCCESS terminal state, excluding
+      user-cancelled / PIN-not-entered drops from the denominator.
+    owner: vp_payments_data
+    steward: director_data_products
+    sla: { freshness: 15_minutes, accuracy_tolerance_pp: 0.1 }
+    formula:
+      numerator:
+        source: fct_upi_txn
+        filter: status = 'SUCCESS' AND txn_direction = 'DEBIT'
+        measure: count(distinct rrn)
+      denominator:
+        source: fct_upi_txn
+        filter: |
+          txn_direction = 'DEBIT'
+          AND status IN ('SUCCESS','FAILURE','DEEMED')
+          AND failure_code NOT IN ('U30','U69')   -- user-cancelled, exclude
+        measure: count(distinct rrn)
+    dimensions: [dt, payer_bank, payee_bank, txn_type, flow_type, city, app_version]
+    related_metrics: [upi_failure_rate, upi_technical_decline_rate]
+    version: v3
+    changelog:
+      - v3 (2026-04-12): excluded user-cancelled from denominator
+      - v2 (2026-01-08): added flow_type dimension
+      - v1 (2025-09-30): initial
+
+  - name: upi_failure_rate
+    display_name: "UPI Failure Rate"
+    description: "1 − success_rate, on the same denominator."
+    owner: vp_payments_data
+    formula:
+      compose:
+        expression: 100 - upi_success_rate
+    dimensions: same_as: upi_success_rate
+    version: v3
+
+  - name: upi_technical_decline_rate
+    display_name: "Technical Decline Rate"
+    description: |
+      Failures attributable to technical bucket (PSP/NPCI/issuer-tech), excludes
+      user-driven and policy-driven failures. The "fix-it" failures.
+    owner: head_psp_engineering
+    formula:
+      numerator:
+        source: fct_upi_txn × dim_failure_code
+        filter: bucket = 'TECHNICAL'
+        measure: count(*)
+      denominator: same as upi_success_rate denominator
+    dimensions: [dt, leg, payer_bank, owner_team]
+    version: v2
+
+  - name: upi_business_decline_rate
+    display_name: "Business Decline Rate"
+    description: "Failures from BUSINESS bucket (issuer policy DNH, KYC limits, etc.)."
+    owner: head_bank_partnerships
+    formula:
+      numerator: { filter: bucket = 'BUSINESS' }
+      denominator: same as upi_success_rate
+    dimensions: [dt, payer_bank, failure_code]
+    version: v2
+
+  - name: txn_latency_p50
+    display_name: "Median Transaction Latency"
+    description: "50th percentile of latency_ms (initiated_at → final_state_at)."
+    formula:
+      source: fct_upi_txn
+      measure: percentile(latency_ms, 0.5)
+    dimensions: [dt, txn_type, payer_bank, payer_psp]
+    version: v1
+
+  - name: txn_latency_p95
+    display_name: "P95 Transaction Latency"
+    formula:
+      source: fct_upi_txn
+      measure: percentile(latency_ms, 0.95)
+    dimensions: [dt, txn_type, payer_bank, payer_psp]
+    version: v1
+
+  - name: psp_uptime
+    display_name: "Mobikwik PSP Uptime"
+    description: "% of minutes in which PSP-side error rate < threshold and switch responsive."
+    owner: head_psp_engineering
+    formula:
+      source: raw_psp_health
+      measure: 100.0 * sum(is_healthy_minute) / count(*)
+    dimensions: [dt, hour]
+    version: v1
+
+  - name: issuer_uptime
+    display_name: "Issuer Bank Uptime (NPCI feed)"
+    description: "Per-bank availability % from NPCI's published feed; reconciled to internal observations."
+    owner: head_bank_partnerships
+    formula:
+      source: raw_psp_health
+      measure: 100.0 * sum(is_healthy_minute) / count(*)
+    dimensions: [dt, hour, bank]
+    version: v1
+
+
+# -----------------------------------------------------------------------------
+# 3. MIX & SEGMENTATION
+# -----------------------------------------------------------------------------
+
+  - name: p2m_share
+    display_name: "P2M Share of UPI"
+    description: "P2M as % of P2M+P2P GMV (or txn count if specified)."
+    formula:
+      compose:
+        numerator: { source: fct_upi_txn, filter: txn_type='P2M' AND is_success=1, measure: sum(amount) }
+        denominator: { source: fct_upi_txn, filter: txn_type IN ('P2M','P2P') AND is_success=1, measure: sum(amount) }
+    dimensions: [dt, city, merchant_category]
+    version: v1
+
+  - name: p2p_share
+    display_name: "P2P Share of UPI"
+    formula: { compose: { expression: 100 - p2m_share } }
+    version: v1
+
+  - name: mandate_share
+    display_name: "Mandate (AutoPay) Share"
+    description: "Mandate-driven debits as % of total UPI debit volume."
+    formula:
+      compose:
+        numerator: { source: fct_upi_txn, filter: category='MANDATE' AND is_success=1, measure: count(*) }
+        denominator: { source: fct_upi_txn, filter: is_success=1, measure: count(*) }
+    dimensions: [dt, merchant_category]
+    version: v1
+
+  - name: lite_share
+    display_name: "UPI Lite Share"
+    description: "UPI Lite (small-value, on-device) as % of total."
+    formula:
+      compose:
+        numerator: { filter: category='LITE' AND is_success=1 }
+        denominator: { filter: is_success=1 }
+    version: v1
+
+
+# -----------------------------------------------------------------------------
+# 4. RISK & DISPUTES
+# -----------------------------------------------------------------------------
+
+  - name: dispute_rate
+    display_name: "Dispute Rate (bps)"
+    description: "Disputes raised per 10,000 UPI txns."
+    owner: head_risk
+    formula:
+      compose:
+        numerator: { source: fct_disputes, measure: count(*) }
+        denominator: { source: fct_upi_txn, filter: is_success=1, measure: count(*) }
+        scale_factor: 10000
+    dimensions: [dt, dispute_type, merchant_category, city]
+    version: v1
+
+  - name: fraud_value_rate
+    display_name: "Fraud Value Rate (bps of GMV)"
+    description: "Confirmed-fraud txn amount / GMV, in basis points."
+    owner: head_risk
+    formula:
+      compose:
+        numerator: { source: fct_disputes, filter: dispute_type='FRAUD', measure: sum(amount) }
+        denominator: { source: fct_upi_txn, filter: is_success=1, measure: sum(amount) }
+        scale_factor: 10000
+    dimensions: [dt, merchant_category, device_cluster]
+    version: v2
+
+  - name: chargeback_rate
+    display_name: "Chargeback Rate (bps)"
+    formula:
+      compose:
+        numerator: { source: fct_disputes, filter: dispute_type='CHARGEBACK', measure: count(*) }
+        denominator: { source: fct_upi_txn, filter: is_success=1, measure: count(*) }
+        scale_factor: 10000
+    version: v1
+
+  - name: dispute_resolution_tat_hrs
+    display_name: "Dispute Resolution TAT (hrs, mean)"
+    formula:
+      source: fct_disputes
+      measure: avg(tat_hours)
+    dimensions: [dt, dispute_type, resolution]
+    version: v1
+
+
+# -----------------------------------------------------------------------------
+# 5. UNIT ECONOMICS
+# -----------------------------------------------------------------------------
+
+  - name: cost_per_txn
+    display_name: "Cost per UPI txn (₹)"
+    description: "Total cost (compute + NPCI + bank fees + risk + support) / successful txns."
+    owner: vp_finance
+    formula:
+      compose:
+        numerator: { source: fct_costs_daily, measure: sum(total_cost_inr) }
+        denominator: { source: fct_upi_txn, filter: is_success=1, measure: count(*) }
+    dimensions: [dt, txn_type]
+    version: v2
+
+  - name: revenue_per_active_user
+    display_name: "Revenue per Active UPI User (RPAU, monthly)"
+    formula:
+      compose:
+        numerator: { source: fct_revenue_monthly, measure: sum(revenue_inr) }
+        denominator: { metric: mau_upi }
+    version: v1
+
+
+# -----------------------------------------------------------------------------
+# Access control (referenced from §5.1 of strategy)
+# -----------------------------------------------------------------------------
+access_groups:
+  - name: founder_circle
+    metrics: [all]
+  - name: payments_leadership
+    metrics: [upi_*, p2m_*, p2p_*, mandate_*, lite_*, dispute_*, fraud_*]
+  - name: risk_leadership
+    metrics: [dispute_*, fraud_*, chargeback_*, *_decline_rate, risk_*]
+  - name: finance_leadership
+    metrics: [cost_per_txn, revenue_per_active_user, upi_gmv, mau_upi]
+  - name: bank_partnerships
+    metrics: [upi_success_rate, upi_failure_rate, *_decline_rate, issuer_uptime, dispute_*]
+  - name: psp_engineering
+    metrics: [upi_*, txn_latency_*, psp_uptime, issuer_uptime]
