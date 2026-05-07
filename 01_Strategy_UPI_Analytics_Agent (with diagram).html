@@ -1,0 +1,1539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PULSE — A Conversational Analytics Agent for Mobikwik UPI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg:#FAFBFE; --bg-soft:#F4F5FA; --panel:#FFFFFF;
+    --line:#E6E8F0; --line-soft:#EFF1F7;
+    --ink:#0E1330; --ink-soft:#4B5278; --ink-muted:#8089A8;
+    --primary:#4F3CC9; --primary-deep:#2C1F8A;
+    --primary-bg:#EEEAFB; --primary-bg-2:#F6F3FF;
+    --accent:#EE3124; --accent-bg:#FFEBE9;
+    --good:#1FAB6E; --good-bg:#E5F6EE;
+    --warn:#E89006; --warn-bg:#FFF4E0;
+    --bad:#DC2626; --bad-bg:#FFE9E9;
+    --shadow-sm:0 1px 2px rgba(14,19,48,0.04);
+    --shadow-md:0 4px 16px rgba(14,19,48,0.06);
+    --shadow-lg:0 8px 32px rgba(14,19,48,0.10);
+    --radius-sm:8px; --radius-md:12px; --radius-lg:16px; --radius-xl:24px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin:0; padding:0; background:var(--bg); color:var(--ink);
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+    font-size:15px; line-height:1.6;
+    -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+  }
+  code, pre, .mono { font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace; }
+
+  /* HERO */
+  .hero { position:relative; overflow:hidden;
+    background:linear-gradient(135deg,#1F1452 0%,#2C1F8A 40%,#4F3CC9 100%);
+    color:#fff; padding:56px 0 76px; }
+  .hero:before { content:''; position:absolute; inset:0;
+    background-image:
+      radial-gradient(circle at 20% 50%, rgba(238,49,36,0.18) 0%, transparent 40%),
+      radial-gradient(circle at 80% 80%, rgba(255,255,255,0.08) 0%, transparent 40%);
+    pointer-events:none; }
+  .hero:after { content:''; position:absolute; inset:0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+    background-size:60px 60px;
+    mask-image:radial-gradient(ellipse at center, black 30%, transparent 70%);
+    -webkit-mask-image:radial-gradient(ellipse at center, black 30%, transparent 70%);
+    pointer-events:none; }
+  .container { max-width:1100px; margin:0 auto; padding:0 32px; position:relative; z-index:1; }
+  .hero-badge { display:inline-flex; align-items:center; gap:8px;
+    padding:6px 14px; border-radius:999px;
+    background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.18);
+    color:#fff; font-size:11px; font-weight:600; letter-spacing:1.2px;
+    backdrop-filter:blur(10px); }
+  .hero-badge .dot { width:6px; height:6px; border-radius:50%;
+    background:#FF7A6E; box-shadow:0 0 10px #FF7A6E; }
+  .hero-product { display:flex; align-items:center; gap:14px; margin-top:28px; }
+  .hero-logo { width:56px; height:56px; border-radius:16px;
+    background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.22);
+    display:flex; align-items:center; justify-content:center;
+    font-weight:800; font-size:22px; color:#fff; backdrop-filter:blur(10px); }
+  .hero-name { font-size:13px; letter-spacing:4px; color:rgba(255,255,255,0.6);
+    font-weight:700; text-transform:uppercase; }
+
+  .pulse-acronym { margin-top:24px; padding:22px 28px;
+    background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.18);
+    border-radius:16px; backdrop-filter:blur(12px);
+    display:grid; grid-template-columns:repeat(5,1fr); gap:4px;
+    position:relative; overflow:hidden; }
+  .pulse-acronym:before { content:''; position:absolute; inset:0;
+    background:linear-gradient(90deg,transparent,rgba(238,49,36,0.10),transparent);
+    pointer-events:none; }
+  .pulse-acronym .ac { display:flex; flex-direction:column; gap:6px;
+    align-items:flex-start; position:relative; z-index:1; }
+  .pulse-acronym .ac .letter { font-size:44px; font-weight:800; line-height:1; letter-spacing:-1px;
+    background:linear-gradient(135deg,#FF7A6E 0%,#FFAA9F 100%);
+    -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .pulse-acronym .ac .word { font-size:11px; letter-spacing:1.5px; font-weight:700;
+    color:rgba(255,255,255,0.85); text-transform:uppercase; }
+  @media (max-width:800px) { .pulse-acronym { grid-template-columns:repeat(2,1fr); padding:18px; }
+    .pulse-acronym .ac .letter { font-size:32px; } }
+
+  .hero-title { font-size:56px; line-height:1.1; font-weight:800; letter-spacing:-1.5px;
+    margin:24px 0 18px; max-width:900px; }
+  .hero-title em { font-style:normal;
+    background:linear-gradient(135deg,#FF7A6E 0%,#FFAA9F 100%);
+    -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .hero-sub { font-size:19px; line-height:1.55; color:rgba(255,255,255,0.78);
+    max-width:720px; font-weight:400; margin-bottom:36px; }
+  .hero-meta { display:flex; flex-wrap:wrap; gap:28px; padding-top:28px;
+    border-top:1px solid rgba(255,255,255,0.12); }
+  .hero-meta-item .lbl { font-size:10px; letter-spacing:1.2px; color:rgba(255,255,255,0.5);
+    font-weight:700; text-transform:uppercase; margin-bottom:4px; }
+  .hero-meta-item .val { font-size:14px; color:#fff; font-weight:600; }
+
+  /* STAT STRIP */
+  .stat-strip { margin-top:-60px; position:relative; z-index:2;
+    background:var(--panel); border:1px solid var(--line);
+    border-radius:var(--radius-xl); box-shadow:var(--shadow-lg);
+    padding:28px 36px; display:grid;
+    grid-template-columns:repeat(4,1fr); gap:28px; }
+  .stat .num { font-size:36px; font-weight:800; line-height:1; letter-spacing:-1px;
+    background:linear-gradient(135deg,var(--primary) 0%,var(--accent) 100%);
+    -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .stat .lbl { font-size:12px; color:var(--ink-soft); margin-top:6px; line-height:1.4; font-weight:500; }
+  .stat + .stat { padding-left:28px; border-left:1px solid var(--line); }
+
+  /* TOP NAV */
+  .top-nav { position:sticky; top:0; z-index:30;
+    background:rgba(250,251,254,0.85); backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--line); padding:12px 0; }
+  .top-nav-inner { display:flex; gap:4px; overflow-x:auto; max-width:1100px;
+    margin:0 auto; padding:0 32px; }
+  .top-nav a { flex-shrink:0; padding:8px 14px; border-radius:8px;
+    font-size:12px; color:var(--ink-soft); text-decoration:none; font-weight:500;
+    transition:0.15s; }
+  .top-nav a:hover { background:var(--primary-bg); color:var(--primary); }
+  .top-nav a.active {
+    background:var(--primary); color:#fff; font-weight:600;
+    box-shadow:0 2px 6px rgba(79,60,201,0.25);
+  }
+  .top-nav a.active:hover { background:var(--primary); color:#fff; }
+  .top-nav a.tag { color:var(--ink-muted); font-size:11px; letter-spacing:1px;
+    font-weight:700; padding:8px; }
+  .top-nav a.tag:hover { background:transparent; color:var(--ink-muted); }
+
+  /* SECTIONS */
+  section { padding:64px 0; }
+  section:nth-of-type(even) { background:var(--bg-soft); }
+  .section-tag { display:inline-flex; align-items:center; gap:8px;
+    padding:6px 12px; border-radius:999px;
+    background:var(--primary-bg); color:var(--primary);
+    font-size:11px; font-weight:700; letter-spacing:1.4px; }
+  .section-tag .num { background:var(--primary); color:#fff;
+    min-width:20px; height:20px; padding:0 6px;
+    border-radius:10px; font-size:11px; font-weight:700;
+    display:inline-flex; align-items:center; justify-content:center; }
+  h2.section-title { font-size:36px; font-weight:800; letter-spacing:-1px; line-height:1.15;
+    margin:14px 0 12px; color:var(--ink); max-width:820px; }
+  .section-lede { font-size:16px; line-height:1.7; color:var(--ink-soft);
+    max-width:760px; margin-bottom:32px; }
+  h3 { font-size:20px; font-weight:700; letter-spacing:-0.4px;
+    margin:32px 0 12px; color:var(--ink); }
+  h4 { font-size:15px; font-weight:700; margin:20px 0 8px; color:var(--ink); }
+  p { margin:0 0 12px; color:var(--ink); }
+  p.big { font-size:16px; line-height:1.65; }
+  .ink-soft { color:var(--ink-soft); }
+  strong { font-weight:700; }
+  code:not(pre code) { background:var(--bg-soft); padding:1px 6px; border-radius:4px;
+    font-size:0.9em; color:var(--primary-deep); font-weight:500;
+    border:1px solid var(--line-soft); }
+  a { color:var(--primary); text-decoration:none; border-bottom:1px solid transparent; transition:0.15s; }
+  a:hover { border-bottom-color:var(--primary); }
+
+  /* COMPONENTS */
+  .card { background:var(--panel); border:1px solid var(--line);
+    border-radius:var(--radius-md); padding:22px; box-shadow:var(--shadow-sm); }
+  .card-row { display:grid; gap:16px; }
+  .card-row.cols-2 { grid-template-columns:repeat(2,1fr); }
+  .card-row.cols-3 { grid-template-columns:repeat(3,1fr); }
+  @media (max-width:800px) {
+    .card-row.cols-2,.card-row.cols-3 { grid-template-columns:1fr; }
+    .stat-strip { grid-template-columns:repeat(2,1fr); }
+    .stat + .stat { padding-left:0; border-left:0; }
+    .hero-title { font-size:38px; }
+  }
+
+  .quote { margin:32px 0; padding:28px 32px;
+    background:linear-gradient(135deg,var(--primary-bg-2),#FFF);
+    border-left:4px solid var(--primary);
+    border-radius:0 var(--radius-md) var(--radius-md) 0;
+    font-size:17px; line-height:1.55; color:var(--ink); position:relative; }
+  .quote:before { content:'"'; position:absolute; top:-10px; left:18px;
+    font-size:64px; color:var(--primary); opacity:0.18;
+    font-family:Georgia,serif; line-height:1; }
+  .quote em { font-style:normal; color:var(--primary); font-weight:600; }
+  .quote .attr { display:block; margin-top:10px; font-size:11px; color:var(--ink-muted);
+    letter-spacing:1px; text-transform:uppercase; font-weight:600; }
+
+  .spine-quote { background:linear-gradient(135deg,var(--primary-deep) 0%,var(--primary) 60%,#6B5BD8 100%);
+    color:#fff; border-left:4px solid var(--accent);
+    font-size:22px; font-weight:600; line-height:1.4; padding:30px 36px;
+    box-shadow:var(--shadow-md); border-radius:var(--radius-md); }
+  .spine-quote:before { color:rgba(255,255,255,0.25); }
+  .spine-quote em { background:linear-gradient(135deg,#FF7A6E 0%,#FFAA9F 100%);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    font-weight:700; }
+  .spine-quote .attr { color:rgba(255,255,255,0.65); }
+
+  .callout { padding:16px 20px; border-radius:var(--radius-md); margin:16px 0;
+    border-left:3px solid var(--primary); background:var(--primary-bg-2);
+    font-size:13px; color:var(--ink); }
+  .callout.warn { background:var(--warn-bg); border-left-color:var(--warn); }
+  .callout.good { background:var(--good-bg); border-left-color:var(--good); }
+  .callout strong { color:var(--primary); }
+  .callout.warn strong { color:var(--warn); }
+  .callout.good strong { color:var(--good); }
+
+  /* tables */
+  .pulse-table { width:100%; border-collapse:collapse; margin:14px 0; font-size:13.5px;
+    background:var(--panel); border-radius:var(--radius-md); overflow:hidden;
+    box-shadow:var(--shadow-sm); border:1px solid var(--line); }
+  .pulse-table th { text-align:left; padding:12px 16px;
+    background:var(--bg-soft); color:var(--ink-muted);
+    font-size:11px; font-weight:700; letter-spacing:1px;
+    border-bottom:1px solid var(--line); }
+  .pulse-table td { padding:12px 16px; border-bottom:1px solid var(--line-soft);
+    color:var(--ink); vertical-align:top; }
+  .pulse-table tr:last-child td { border-bottom:0; }
+  .pulse-table tr:hover { background:var(--bg-soft); }
+
+  .badge { display:inline-flex; align-items:center; padding:3px 10px; border-radius:999px;
+    font-size:11px; font-weight:600; letter-spacing:0.3px;
+    background:var(--primary-bg); color:var(--primary); }
+  .badge.high { background:var(--bad-bg); color:var(--bad); }
+  .badge.med { background:var(--warn-bg); color:var(--warn); }
+  .badge.low { background:var(--good-bg); color:var(--good); }
+
+  /* EXEC SUMMARY */
+  #exec { padding-top:56px; padding-bottom:48px; }
+  .exec-grid { display:grid; grid-template-columns:1.25fr 1fr; gap:28px; align-items:start; }
+  @media (max-width:800px) { .exec-grid { grid-template-columns:1fr; } }
+  .exec-points { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:22px; }
+  .exec-points-head { grid-column:1 / -1; padding:12px 14px; background:var(--primary-bg-2);
+    border:1px dashed var(--primary); border-radius:var(--radius-md); margin-bottom:2px; }
+  .exec-points-head .eh-tag { font-size:10px; letter-spacing:1.5px; color:var(--primary); font-weight:700; }
+  .exec-points-head .eh-title { font-weight:700; font-size:14px; color:var(--ink); margin:3px 0; }
+  .exec-points-head .eh-sub { font-size:11.5px; color:var(--ink-soft); }
+  .exec-point { display:flex; gap:10px; padding:12px 14px;
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius-md); }
+  .exec-point .ic { width:28px; height:28px; border-radius:8px; flex-shrink:0;
+    background:var(--primary-bg); color:var(--primary);
+    display:flex; align-items:center; justify-content:center;
+    font-weight:800; font-size:12px; }
+  .exec-point .t { font-weight:600; color:var(--ink); margin-bottom:2px; font-size:13px; line-height:1.3; }
+  .exec-point .d { font-size:11.5px; color:var(--ink-soft); line-height:1.45; }
+  @media (max-width:640px) { .exec-points { grid-template-columns:1fr; } }
+
+  /* RAW DATA tables */
+  .table-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:14px; margin:20px 0; }
+  @media (max-width:800px) { .table-grid { grid-template-columns:1fr; } }
+  .table-card { background:var(--panel); border:1px solid var(--line);
+    border-radius:var(--radius-md); padding:18px; box-shadow:var(--shadow-sm); }
+  .table-card h4 { margin:0 0 10px; font-size:13px; color:var(--primary);
+    display:flex; align-items:center; gap:8px; }
+  .table-card h4 .dot { width:7px; height:7px; border-radius:50%; background:var(--primary); }
+  .table-card .table-name { font-family:'JetBrains Mono',monospace; font-size:11px;
+    color:var(--ink-muted); margin-bottom:10px; }
+  .pill-list { display:flex; flex-wrap:wrap; gap:5px; }
+  .pill { font-size:11px; padding:3px 8px; border-radius:5px;
+    background:var(--bg-soft); color:var(--ink-soft);
+    font-family:'JetBrains Mono',monospace;
+    border:1px solid var(--line-soft); }
+  .pill.key { background:var(--primary-bg); color:var(--primary);
+    border-color:var(--primary-bg); font-weight:600; }
+
+  /* ARCHITECTURE DIAGRAM */
+  .architecture { margin:24px 0 32px; padding:6px;
+    background:linear-gradient(135deg,var(--bg-soft),#fff);
+    border:1px solid var(--line); border-radius:var(--radius-lg);
+    box-shadow:var(--shadow-md); }
+  .arch-title-bar { text-align:center; padding:16px; }
+  .arch-title-bar .at-tag { display:inline-block; font-size:10px; letter-spacing:1.5px;
+    font-weight:700; color:var(--ink-muted); }
+  .arch-title-bar .at-h { font-size:20px; font-weight:700; margin-top:6px;
+    color:var(--ink); letter-spacing:-0.4px; }
+  .arch-tier { border-radius:var(--radius-md); padding:20px 24px; margin:6px; }
+  .arch-tier-1 { background:linear-gradient(135deg,#2C1F8A 0%,#4F3CC9 100%);
+    color:#fff; box-shadow:var(--shadow-sm); }
+  .arch-tier-2 { background:linear-gradient(135deg,#fff 0%,var(--primary-bg-2) 100%);
+    border:2px solid var(--primary); position:relative; box-shadow:var(--shadow-md); }
+  .arch-tier-2:before { content:'⚡ THE CONTRACT'; position:absolute; top:-13px; left:24px;
+    background:linear-gradient(135deg, #2C1F8A 0%, #4F3CC9 100%); color:#fff;
+    font-size:10px; font-weight:800; letter-spacing:1.5px;
+    padding:4px 12px; border-radius:6px;
+    box-shadow:0 2px 8px rgba(44,31,138,0.28); }
+  .arch-tier-3 { background:var(--bg-soft); border:1px solid var(--line); }
+  .arch-tier-label { font-size:10px; letter-spacing:1.5px; font-weight:700;
+    margin-bottom:14px; opacity:0.78; }
+  .arch-tier-label .pin { display:inline-block; padding:3px 8px; border-radius:4px;
+    background:rgba(0,0,0,0.08); margin-right:8px; font-weight:800; }
+  .arch-tier-1 .arch-tier-label .pin { background:rgba(255,255,255,0.18); }
+
+  .arch-tier-1 .arch-tier-body { display:grid;
+    grid-template-columns:1fr 36px 1.4fr; align-items:center; gap:4px; }
+  .arch-block { background:rgba(255,255,255,0.10); border:1px solid rgba(255,255,255,0.22);
+    border-radius:10px; padding:14px 16px; backdrop-filter:blur(8px); }
+  .arch-block .a-icon { font-size:22px; margin-bottom:4px; }
+  .arch-block .a-h { font-weight:700; font-size:14px; }
+  .arch-block .a-c { font-size:12px; opacity:0.82; margin-top:4px; line-height:1.45; }
+  .arch-mini-arrow { text-align:center; font-size:18px; opacity:0.7; }
+  .arch-mini-arrow .lbl { display:block; font-size:9px; letter-spacing:1px; opacity:0.65; margin-top:2px; }
+
+  .arch-connector { display:flex; flex-direction:column; align-items:center; padding:12px 0; }
+  .arch-connector-line { width:2px; height:14px;
+    background:linear-gradient(180deg,var(--primary),#2C1F8A); }
+  .arch-connector-label { background:linear-gradient(135deg, #2C1F8A 0%, #4F3CC9 100%); color:#fff;
+    padding:8px 16px; border-radius:6px;
+    font-size:11px; font-weight:700; letter-spacing:0.8px; text-align:center;
+    box-shadow:0 2px 8px rgba(44,31,138,0.30); }
+  .arch-connector-label strong { display:block; letter-spacing:1.2px; }
+  .arch-connector-label span { font-size:10px; opacity:0.92; display:block;
+    margin-top:2px; font-weight:500; }
+  .arch-connector-arrow { color:#2C1F8A; font-size:16px; margin-top:4px; }
+
+  .arch-semantic-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:14px; }
+  .arch-feature { background:var(--panel); border:1px solid var(--line);
+    border-radius:10px; padding:13px; }
+  .arch-feature .ic { font-size:18px; }
+  .arch-feature .t { font-weight:700; font-size:13px; margin-top:6px; color:var(--ink); }
+  .arch-feature .d { font-size:11px; color:var(--ink-soft); margin-top:4px; line-height:1.45; }
+  .arch-tier-tagline { background:linear-gradient(135deg,var(--primary-deep),var(--primary));
+    color:#fff; padding:12px 16px; border-radius:8px;
+    font-size:13px; line-height:1.5; }
+  .arch-tier-tagline strong { color:#FFAA9F; }
+
+  .arch-wall { margin:10px 6px; padding:14px 22px;
+    background:linear-gradient(135deg,#FEF3C7 0%,#FFFBEB 100%);
+    border-radius:10px; border:1px dashed #B45309; text-align:center; }
+  .arch-wall .wall-bar { height:3px; background:repeating-linear-gradient(
+    90deg, #B45309 0 14px, transparent 14px 24px); margin:4px 0; }
+  .wall-content { padding:8px 0; }
+  .wall-title { font-weight:700; color:#92400E; font-size:13px; margin-bottom:8px; letter-spacing:0.4px; }
+  .wall-failures { display:flex; gap:14px; justify-content:center; flex-wrap:wrap; }
+  .wall-failures span { font-size:12px; color:#92400E; font-weight:600;
+    background:#fff; padding:4px 12px; border-radius:5px;
+    border:1px solid #FCD34D; }
+
+  .arch-raw-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:12px; }
+  .arch-raw-grid > div { background:var(--panel); border:1px solid var(--line);
+    border-radius:6px; padding:8px 10px;
+    font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--ink-muted); }
+  .arch-raw-meta { display:flex; gap:14px; font-size:11px; color:var(--ink-muted);
+    border-top:1px solid var(--line); padding-top:10px; flex-wrap:wrap; }
+  .arch-raw-meta em { font-style:normal; color:var(--warn); font-weight:700;
+    background:var(--warn-bg); padding:1px 6px; border-radius:3px;
+    margin-left:4px; font-size:10px; letter-spacing:0.5px; }
+  @media (max-width:800px) {
+    .arch-tier-1 .arch-tier-body { grid-template-columns:1fr; }
+    .arch-mini-arrow { transform:rotate(90deg); }
+    .arch-semantic-grid { grid-template-columns:repeat(2,1fr); }
+    .arch-raw-grid { grid-template-columns:repeat(2,1fr); }
+  }
+
+  /* PRINCIPLES — true 5-col one-row */
+  .principles-row { display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin:14px 0 24px; }
+  .principle { padding:14px 12px; background:var(--panel); border:1px solid var(--line);
+    border-radius:var(--radius-md); transition:0.15s; }
+  .principle:hover { border-color:var(--primary); transform:translateY(-1px); }
+  .principle .pn { width:24px; height:24px; border-radius:50%;
+    background:var(--primary-bg); color:var(--primary);
+    display:inline-flex; align-items:center; justify-content:center;
+    font-weight:800; font-size:11px; margin-bottom:8px; }
+  .principle .pt { font-weight:700; font-size:12.5px; color:var(--ink); margin-bottom:4px; line-height:1.3; }
+  .principle .pd { font-size:11px; color:var(--ink-soft); line-height:1.45; }
+  @media (max-width:800px) { .principles-row { grid-template-columns:repeat(2,1fr); } }
+
+  /* YAML BLOCK */
+  .code-block { margin:16px 0; border-radius:var(--radius-md); overflow:hidden;
+    border:1px solid var(--line); background:#1A1A2E; }
+  .code-block-head { padding:10px 16px; background:#14142A;
+    display:flex; align-items:center; justify-content:space-between;
+    color:#B7BDCC; font-size:12px; }
+  .code-block-head .lang { padding:2px 8px; border-radius:4px;
+    background:rgba(255,255,255,0.08);
+    font-size:10px; letter-spacing:1px; font-weight:700; }
+  .code-block pre { margin:0; padding:18px 22px; color:#E6E8F0;
+    font-size:12.5px; line-height:1.6; overflow-x:auto; }
+  .yaml-key { color:#82AAFF; }
+  .yaml-str { color:#C3E88D; }
+  .yaml-num { color:#F78C6C; }
+  .yaml-cm { color:#676E95; font-style:italic; }
+
+  /* CONTEXT BUNDLE (single LLM + .md context) */
+  .context-bundle {
+    margin: 18px 0 12px; padding: 26px; background: var(--panel);
+    border: 1px solid var(--line); border-radius: var(--radius-lg);
+    display: grid; grid-template-columns: 1fr auto 1.6fr; gap: 22px; align-items: center;
+    box-shadow: var(--shadow-sm);
+  }
+  @media (max-width: 800px) {
+    .context-bundle { grid-template-columns: 1fr; gap: 14px; }
+    .context-bundle .cb-arrow { transform: rotate(90deg); justify-self: center; }
+  }
+  .cb-llm {
+    background: linear-gradient(135deg, var(--primary-deep) 0%, var(--primary) 100%);
+    color: #fff; border-radius: var(--radius-md); padding: 24px; text-align: center;
+    box-shadow: var(--shadow-md);
+  }
+  .cb-llm-icon { font-size: 36px; margin-bottom: 6px; }
+  .cb-llm-name { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; }
+  .cb-llm-sub { font-size: 11px; opacity: 0.78; margin-top: 4px; letter-spacing: 0.5px; }
+  .cb-arrow { font-size: 28px; color: var(--primary); font-weight: 800; text-align: center; }
+
+  .cb-context {
+    background: linear-gradient(135deg, #fff 0%, var(--primary-bg-2) 100%);
+    border: 2px solid var(--primary); border-radius: var(--radius-md);
+    padding: 18px; position: relative;
+  }
+  .cb-tag {
+    position: absolute; top: -11px; left: 18px;
+    background: var(--primary); color: #fff;
+    font-size: 10px; font-weight: 800; letter-spacing: 1.5px;
+    padding: 4px 10px; border-radius: 5px;
+  }
+  .cb-files { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px; }
+  @media (max-width: 800px) { .cb-files { grid-template-columns: 1fr; } }
+  .cb-file {
+    display: flex; gap: 10px; align-items: flex-start;
+    padding: 10px 12px; background: #fff; border: 1px solid var(--line); border-radius: 8px;
+    font-size: 12px; line-height: 1.4;
+  }
+  .cb-file .cb-ext {
+    background: var(--primary-bg); color: var(--primary);
+    font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700;
+    padding: 3px 6px; border-radius: 4px; flex-shrink: 0; margin-top: 1px;
+  }
+  .cb-file b { color: var(--ink); font-size: 12.5px; }
+  .cb-file span { color: var(--ink-muted); font-size: 11px; }
+
+  /* AGENT FLOW (legacy — kept for back-compat) */
+  .agent-flow { margin:24px 0; padding:28px; background:var(--panel);
+    border:1px solid var(--line); border-radius:var(--radius-lg); overflow-x:auto; }
+  .agent-row { display:grid; grid-template-columns:repeat(4,1fr); gap:14px;
+    margin-bottom:20px; min-width:720px; }
+  .agent-step { padding:16px; background:linear-gradient(135deg,var(--primary-bg-2),#FFF);
+    border:1.5px solid var(--primary-bg); border-radius:var(--radius-md);
+    position:relative; }
+  .agent-step .step-num { width:26px; height:26px; border-radius:50%;
+    background:var(--primary); color:#fff;
+    display:inline-flex; align-items:center; justify-content:center;
+    font-weight:700; font-size:12px; margin-bottom:8px; }
+  .agent-step .step-name { font-weight:700; font-size:14px; color:var(--ink); margin-bottom:4px; }
+  .agent-step .step-model { font-size:10px; letter-spacing:1px; font-weight:600;
+    color:var(--primary); margin-bottom:8px; }
+  .agent-step .step-d { font-size:12px; color:var(--ink-soft); line-height:1.5; }
+  .agent-step:not(:last-child):after { content:'→'; position:absolute;
+    right:-12px; top:50%; transform:translateY(-50%);
+    color:var(--primary); font-size:18px; font-weight:700; z-index:2; }
+
+  /* WONT GRID */
+  .wont-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin:18px 0; }
+  @media (max-width:800px) { .wont-grid { grid-template-columns:repeat(2,1fr); } }
+  .wont { padding:16px; background:var(--bad-bg); border:1px solid #F7BCBC;
+    border-radius:var(--radius-md); }
+  .wont .x { width:26px; height:26px; border-radius:50%; background:#fff;
+    color:var(--bad);
+    display:inline-flex; align-items:center; justify-content:center;
+    font-weight:800; margin-bottom:8px; font-size:13px; }
+  .wont .t { font-weight:700; color:var(--bad); margin-bottom:4px; font-size:13px; }
+  .wont .d { font-size:11.5px; color:var(--ink); line-height:1.5; }
+
+  /* FALLBACK FLOW */
+  .fallback-flow { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;
+    margin:20px 0; align-items:stretch; }
+  @media (max-width:800px) { .fallback-flow { grid-template-columns:1fr; } }
+  .fb-step { padding:18px; background:var(--panel); border:1px solid var(--line);
+    border-radius:var(--radius-md); }
+  .fb-step .fb-num { width:28px; height:28px; border-radius:50%;
+    background:var(--primary); color:#fff;
+    display:inline-flex; align-items:center; justify-content:center;
+    font-weight:700; font-size:13px; margin-bottom:8px; }
+  .fb-step.warn .fb-num { background:var(--warn); }
+  .fb-step.bad .fb-num { background:var(--bad); }
+  .fb-step .fb-cond { font-size:10px; letter-spacing:1px; font-weight:700;
+    color:var(--ink-muted); text-transform:uppercase; margin-bottom:4px; }
+  .fb-step .fb-action { font-weight:700; color:var(--ink); margin-bottom:4px; }
+  .fb-step .fb-d { font-size:12px; color:var(--ink-soft); line-height:1.5; }
+
+  /* TIMELINE */
+  .timeline { margin:24px 0; position:relative; padding-left:32px; }
+  .timeline:before { content:''; position:absolute; left:12px; top:12px; bottom:12px; width:2px;
+    background:linear-gradient(180deg,var(--primary) 0%,var(--accent) 100%); }
+  .tl-row { position:relative; margin-bottom:18px; }
+  .tl-row:before { content:''; position:absolute; left:-25px; top:14px; width:14px; height:14px;
+    border-radius:50%; background:var(--primary); border:3px solid var(--panel);
+    box-shadow:0 0 0 1px var(--primary); }
+  .tl-card { background:var(--panel); border:1px solid var(--line);
+    border-radius:var(--radius-md); padding:16px 20px; box-shadow:var(--shadow-sm);
+    display:grid; grid-template-columns:auto 1fr auto; gap:20px; align-items:center; }
+  .tl-phase { font-size:11px; font-weight:700; letter-spacing:1px; color:var(--primary);
+    padding:4px 10px; border-radius:999px; background:var(--primary-bg); }
+  .tl-weeks { font-size:11px; color:var(--ink-muted); font-weight:600; }
+  .tl-title { font-weight:600; color:var(--ink); margin-bottom:2px; font-size:14px; }
+  .tl-dod { font-size:12px; color:var(--ink-soft); }
+
+  /* NORTH STAR */
+  .north { background:linear-gradient(135deg,var(--primary-deep) 0%,var(--primary) 100%);
+    color:#fff; padding:32px; border-radius:var(--radius-lg);
+    margin:20px 0 24px; position:relative; overflow:hidden; }
+  .north:before { content:''; position:absolute; right:-60px; top:-60px; width:240px; height:240px;
+    background:radial-gradient(circle,rgba(238,49,36,0.5) 0%,transparent 70%); pointer-events:none; }
+  .north .lbl { font-size:11px; letter-spacing:1.5px; opacity:0.7; font-weight:700; }
+  .north .star { font-size:26px; font-weight:700; margin:8px 0; max-width:700px; }
+  .north .compare { display:flex; gap:32px; margin-top:18px; padding-top:18px;
+    border-top:1px solid rgba(255,255,255,0.18); flex-wrap:wrap; align-items:center; }
+  .north .compare .lab { font-size:11px; opacity:0.7; letter-spacing:1px; font-weight:600; }
+  .north .compare .v { font-size:22px; font-weight:700; margin-top:4px; }
+  .arrow-big { color:#FFAA9F; font-size:22px; align-self:center; }
+
+  /* KPI */
+  .kpi-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin:18px 0; }
+  @media (max-width:800px) { .kpi-grid { grid-template-columns:repeat(2,1fr); } }
+  .kpi { padding:16px; background:var(--panel); border:1px solid var(--line);
+    border-radius:var(--radius-md); }
+  .kpi .v { font-size:22px; font-weight:700; color:var(--primary); }
+  .kpi .v.good { color:var(--good); }
+  .kpi .l { font-size:12px; color:var(--ink-soft); margin-top:2px; }
+  .kpi .target { font-size:10.5px; color:var(--ink-muted); margin-top:6px;
+    padding-top:6px; border-top:1px solid var(--line-soft);
+    font-weight:600; letter-spacing:0.5px; text-transform:uppercase; }
+
+  /* ROI */
+  .roi-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin:20px 0; }
+  @media (max-width:800px) { .roi-grid { grid-template-columns:1fr; } }
+  .roi-card { padding:24px; border-radius:var(--radius-md); border:1px solid var(--line);
+    background:var(--panel); }
+  .roi-card.cost { background:linear-gradient(135deg,var(--bad-bg),#FFF); border-color:#FAC8C8; }
+  .roi-card.gain { background:linear-gradient(135deg,var(--good-bg),#FFF); border-color:#BFE7D2; }
+  .roi-card.strategic { background:linear-gradient(135deg,var(--primary-bg-2),#FFF); border-color:#D8CFFB; }
+  .roi-card .l { font-size:11px; letter-spacing:1.4px; font-weight:700; }
+  .roi-card.cost .l { color:var(--bad); }
+  .roi-card.gain .l { color:var(--good); }
+  .roi-card.strategic .l { color:var(--primary); }
+  .roi-card .v { font-size:30px; font-weight:800; margin:8px 0 6px;
+    line-height:1.1; letter-spacing:-0.5px; }
+  .roi-card .d { font-size:12.5px; color:var(--ink-soft); line-height:1.5; }
+
+  /* est. pill */
+  .est-pill { font-size:9px; padding:1px 6px; border-radius:3px;
+    background:var(--warn-bg); color:var(--warn);
+    font-weight:700; letter-spacing:0.5px; vertical-align:middle;
+    margin-left:4px; text-transform:uppercase;
+    border:1px solid #F4D595; }
+  .stat .est-pill { display:inline-block; margin-top:6px; margin-left:0; }
+
+  /* ASSUMPTIONS */
+  .assumptions { margin:24px 0; padding:22px 26px;
+    background:linear-gradient(135deg,var(--warn-bg) 0%,#FFFAEE 100%);
+    border:1px solid #F4D595; border-radius:var(--radius-md); }
+  .assumptions .ah { font-size:11px; letter-spacing:1.5px; font-weight:800;
+    color:var(--warn); margin-bottom:8px; }
+  .assumptions h4 { font-size:16px; margin:0 0 8px; color:var(--ink); letter-spacing:-0.3px; }
+  .assumptions ul { margin:12px 0 0; padding:0; list-style:none; }
+  .assumptions li { padding:8px 0; border-bottom:1px dashed rgba(232,144,6,0.2);
+    font-size:12.5px; color:var(--ink); line-height:1.55;
+    display:grid; grid-template-columns:90px 1fr; gap:12px; }
+  .assumptions li:last-child { border-bottom:0; }
+  .assumptions li .src { font-size:10px; letter-spacing:1px; font-weight:700;
+    text-transform:uppercase; color:var(--warn);
+    background:#fff; padding:3px 8px; border-radius:4px; align-self:start;
+    border:1px solid #F4D595; text-align:center; }
+  .assumptions li .src.measured { color:var(--good); border-color:#BDE5CD; }
+  .assumptions li .src.target { color:var(--primary); border-color:#D8CFFB; }
+
+  /* LIVE PROTOTYPE CTA */
+  .live-cta {
+    margin: 24px 0 8px; padding: 22px 26px;
+    background: linear-gradient(135deg, var(--primary-deep) 0%, var(--primary) 60%, #6B5BD8 100%);
+    color: #fff; border-radius: var(--radius-lg);
+    display: grid; grid-template-columns: auto 1fr auto; gap: 22px; align-items: center;
+    box-shadow: var(--shadow-md); position: relative; overflow: hidden;
+  }
+  .live-cta:before {
+    content: ''; position: absolute; right: -40px; top: -40px; width: 180px; height: 180px;
+    background: radial-gradient(circle, rgba(238,49,36,0.45) 0%, transparent 70%); pointer-events: none;
+  }
+  .live-cta .cta-icon {
+    width: 52px; height: 52px; border-radius: 14px;
+    background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.22);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    font-size: 24px; backdrop-filter: blur(8px); position: relative; z-index: 1;
+  }
+  .live-cta .cta-text { position: relative; z-index: 1; }
+  .live-cta .cta-tag {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 10px; letter-spacing: 1.5px; font-weight: 800; opacity: 0.78;
+  }
+  .live-cta .cta-tag .live-dot {
+    width: 7px; height: 7px; border-radius: 50%; background: #FF7A6E;
+    box-shadow: 0 0 10px #FF7A6E;
+    animation: live-pulse 1.6s infinite;
+  }
+  @keyframes live-pulse { 0%,100% { opacity:1 } 50% { opacity:0.4 } }
+  .live-cta .cta-h {
+    font-size: 19px; font-weight: 700; margin-top: 4px; letter-spacing: -0.3px; line-height: 1.3;
+  }
+  .live-cta .cta-d { font-size: 13px; color: rgba(255,255,255,0.82); margin-top: 4px; }
+  .live-cta .cta-btn {
+    background: #fff; color: var(--primary-deep);
+    padding: 12px 22px; border-radius: 10px; font-weight: 700; font-size: 14px;
+    text-decoration: none; border: 0; flex-shrink: 0; position: relative; z-index: 1;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.18);
+    transition: 0.15s;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .live-cta .cta-btn:hover {
+    transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,0,0,0.22); border-bottom: 0;
+    color: var(--accent);
+  }
+  .live-cta .cta-url {
+    font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px;
+    color: rgba(255,255,255,0.6); margin-top: 6px; word-break: break-all;
+  }
+  @media (max-width: 800px) {
+    .live-cta { grid-template-columns: 1fr; text-align: center; }
+    .live-cta .cta-icon { margin: 0 auto; }
+  }
+
+  /* APPENDIX */
+  .appendix { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin:24px 0; }
+  @media (max-width:800px) { .appendix { grid-template-columns:1fr; } }
+  .appx { padding:20px; background:var(--panel); border:1px solid var(--line);
+    border-radius:var(--radius-md); transition:0.15s; }
+  .appx:hover { border-color:var(--primary); transform:translateY(-2px); box-shadow:var(--shadow-md); }
+  .appx .name { font-family:'JetBrains Mono',monospace; font-size:11px;
+    color:var(--primary); font-weight:600; }
+  .appx .title { font-weight:600; margin:8px 0 4px; }
+  .appx .d { font-size:12px; color:var(--ink-soft); }
+
+  /* FOOTER */
+  footer { background:var(--ink); color:rgba(255,255,255,0.7); padding:48px 0; text-align:center; }
+  footer .container { display:flex; flex-direction:column; align-items:center; gap:14px; }
+  footer .closing-quote { font-size:20px; font-weight:600; color:#fff; max-width:720px;
+    line-height:1.5; letter-spacing:-0.3px; }
+  footer .closing-quote em { font-style:normal;
+    background:linear-gradient(135deg,#FF7A6E 0%,#FFAA9F 100%);
+    -webkit-background-clip:text; background-clip:text; color:transparent; }
+  footer .meta { font-size:12px; color:rgba(255,255,255,0.4);
+    letter-spacing:1px; text-transform:uppercase; }
+
+  ::-webkit-scrollbar { width:8px; height:8px; }
+  ::-webkit-scrollbar-thumb { background:#D7DAE6; border-radius:4px; }
+  ::-webkit-scrollbar-thumb:hover { background:#B8BCD0; }
+
+  @media print {
+    .top-nav { display:none; }
+    .hero { padding:40px 0; }
+    .hero-title { font-size:36px; }
+    section { page-break-inside:avoid; padding:32px 0; }
+    .stat-strip { box-shadow:none; }
+    .card,.pulse-table,.table-card,.roi-card,.kpi,.agent-flow,.tl-card,.appx,.architecture {
+      box-shadow:none; break-inside:avoid; }
+  }
+</style>
+</head>
+
+<body>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="container">
+    <span class="hero-badge"><span class="dot"></span>STRATEGY · MAY 2026</span>
+    <div class="hero-product">
+      <div class="hero-logo">P</div>
+      <span class="hero-name">PULSE</span>
+    </div>
+
+    <div class="pulse-acronym" aria-label="PULSE acronym breakdown">
+      <div class="ac"><span class="letter">P</span><span class="word">ayments</span></div>
+      <div class="ac"><span class="letter">U</span><span class="word">nified</span></div>
+      <div class="ac"><span class="letter">L</span><span class="word">LM-powered</span></div>
+      <div class="ac"><span class="letter">S</span><span class="word">earch &amp;</span></div>
+      <div class="ac"><span class="letter">E</span><span class="word">xploration</span></div>
+    </div>
+
+    <h1 class="hero-title">A conversational analytics agent <em>for Mobikwik UPI</em>, built on a governed semantic layer.</h1>
+    <p class="hero-sub">
+      Leadership asks dozens of UPI questions a day — success rate, GMV, issuer health, disputes.
+      Today those answers come from stale dashboards and Slack threads. PULSE replaces that friction
+      with a single chat surface that speaks only to a versioned metric layer — never to raw tables.
+    </p>
+    <div class="hero-meta">
+      <div class="hero-meta-item">
+        <div class="lbl">Author</div><div class="val">Varun Rustagi</div>
+      </div>
+      <div class="hero-meta-item">
+        <div class="lbl">Document type</div><div class="val">Strategy &amp; architecture</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- STAT STRIP -->
+<div class="container">
+  <div class="stat-strip">
+    <div class="stat">
+      <div class="num">&lt;90s</div>
+      <div class="lbl">Target median time-to-answer<br/>for a leadership question</div>
+      <span class="est-pill">TARGET</span>
+    </div>
+    <div class="stat">
+      <div class="num">25</div>
+      <div class="lbl">KPIs in the v1 metric catalogue<br/>— each YAML, owned, versioned</div>
+      <span class="est-pill">SCOPE</span>
+    </div>
+    <div class="stat">
+      <div class="num">75%</div>
+      <div class="lbl">Of leadership questions answered<br/>without an analyst hop · GA target</div>
+      <span class="est-pill">TARGET</span>
+    </div>
+    <div class="stat">
+      <div class="num">~₹3 Cr</div>
+      <div class="lbl">Year-1 analyst time recaptured<br/>(decision-velocity gain on top)</div>
+      <span class="est-pill">EST.</span>
+    </div>
+  </div>
+</div>
+
+<!-- TOP NAV -->
+<nav class="top-nav">
+  <div class="top-nav-inner">
+    <a class="tag">JUMP TO</a>
+    <a href="#exec">Executive summary</a>
+    <a href="#problem">Problem</a>
+    <a href="#raw">Raw data</a>
+    <a href="#semantic">Semantic layer</a>
+    <a href="#agent">RAG LLM agent</a>
+    <a href="#governance">Governance</a>
+    <a href="#roadmap">Roadmap</a>
+    <a href="#metrics">Success metrics</a>
+    <a href="#risks">Risks</a>
+    <a href="#close">Appendices</a>
+  </div>
+</nav>
+
+<!-- 1. EXECUTIVE SUMMARY -->
+<section id="exec">
+  <div class="container">
+    <span class="section-tag"><span class="num">1</span>EXECUTIVE SUMMARY</span>
+    <h2 class="section-title">At Mobikwik's pace, leadership asks more UPI questions in a week than any dashboard roadmap could pre-build in a quarter.</h2>
+    <div class="exec-grid">
+      <div>
+        <p class="big">
+          A leader types a question; the agent picks the right metric, runs it on a governed semantic layer,
+          and returns a number, a trend, and a "so-what" — without ever touching raw tables.
+          That last clause is the design choice the rest of this document defends.
+        </p>
+        <div class="quote">
+          Most LLM-on-data products fail at the metric layer, not the model layer.
+          They let the model invent definitions for "success rate" or "active user" on the fly,
+          and the answer in chat diverges from the dashboard, the board deck, and the regulator filing.
+          PULSE removes that failure mode by construction: every metric is defined once, owned, versioned.
+          <em>The agent picks one — it doesn't write one.</em>
+          <span class="attr">— Why the agent never queries raw tables</span>
+        </div>
+      </div>
+      <div class="exec-points">
+        <div class="exec-points-head">
+          <div class="eh-tag">FOUR PILLARS</div>
+          <div class="eh-title">What this strategy covers</div>
+          <div class="eh-sub">A → D map to the four sections you'll find in this document.</div>
+        </div>
+        <div class="exec-point">
+          <div class="ic">A</div>
+          <div>
+            <div class="t">Raw data — what UPI generates</div>
+            <div class="d">200M+ rows/month from txns, users, devices, banks, merchants, disputes — too costly to query directly.</div>
+          </div>
+        </div>
+        <div class="exec-point">
+          <div class="ic">B</div>
+          <div>
+            <div class="t">Semantic layer — the contract</div>
+            <div class="d">Curated metrics defined as code, owned by a steward — the safe surface the LLM is allowed to see.</div>
+          </div>
+        </div>
+        <div class="exec-point">
+          <div class="ic">C</div>
+          <div>
+            <div class="t">LLM agent — RAG over the metric catalogue (semantic layer)</div>
+            <div class="d">One LLM call, grounded in a curated context bundle. Numbers from the metric server, never the model.</div>
+          </div>
+        </div>
+        <div class="exec-point">
+          <div class="ic">D</div>
+          <div>
+            <div class="t">Governance — the moat</div>
+            <div class="d">RBAC at metric level, full traceability, NPCI reconciliation, refusal-to-guess by design.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 2. PROBLEM -->
+<section id="problem">
+  <div class="container">
+    <span class="section-tag"><span class="num">2</span>PROBLEM FRAMING</span>
+    <h2 class="section-title">Same gap. Three personas.</h2>
+
+    <table class="pulse-table">
+      <thead><tr>
+        <th style="width:22%">PERSONA</th>
+        <th style="width:36%">WHAT THEY ASK</th>
+        <th>TODAY'S FRICTION</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Founder / CXO</strong></td>
+          <td><em>"Are we growing? Where are we leaking?"</em></td>
+          <td>Dashboard exists but lags 24h, no drill-down, exec pings analytics</td>
+        </tr>
+        <tr>
+          <td><strong>Business head</strong> <span class="ink-soft" style="font-size:12px">(P2M, P2P, Mandate)</span></td>
+          <td><em>"Why did my conversion dip yesterday?"</em></td>
+          <td>Has 4 dashboards, none of them stitch the funnel</td>
+        </tr>
+        <tr>
+          <td><strong>Analyst / PM</strong></td>
+          <td><em>"Pull P2M GMV by issuer bank for the last 30 days"</em></td>
+          <td>30-min SQL job, often re-asked weekly</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="quote spine-quote">
+      PULSE is the <em>semantic spine</em>; the chatbot is just the most visible surface on it.
+    </div>
+  </div>
+</section>
+
+<!-- 3. RAW DATA -->
+<section id="raw">
+  <div class="container">
+    <span class="section-tag"><span class="num">3</span>RAW DATA LAYER</span>
+    <h2 class="section-title">A single UPI transaction generates an extraordinary amount of structured signal.</h2>
+    <p class="section-lede">
+      The rails — the <strong>four-party model</strong> of a UPI transaction (NPCI ↔ PSP ↔ Issuer Bank ↔ Beneficiary Bank),
+      which defines how money moves securely from payer to beneficiary in real time — are designed for traceability and dispute resolution.
+      Every state transition writes a row. This is the data exactly as it lands from production.
+    </p>
+
+    <h3>Per-transaction signals</h3>
+    <div class="table-grid">
+      <div class="table-card">
+        <h4><span class="dot"></span>Identifiers</h4>
+        <div class="table-name">raw_upi_transactions</div>
+        <div class="pill-list">
+          <span class="pill key">txn_id</span>
+          <span class="pill">rrn</span>
+          <span class="pill">upi_txn_ref_id</span>
+          <span class="pill">npci_txn_id</span>
+          <span class="pill">merchant_order_id</span>
+        </div>
+      </div>
+      <div class="table-card">
+        <h4><span class="dot"></span>Lifecycle timestamps</h4>
+        <div class="table-name">8 state transitions per txn</div>
+        <div class="pill-list">
+          <span class="pill">initiated_at</span>
+          <span class="pill">pin_entered_at</span>
+          <span class="pill">psp_request_at</span>
+          <span class="pill">npci_received_at</span>
+          <span class="pill">issuer_response_at</span>
+          <span class="pill">beneficiary_credit_at</span>
+          <span class="pill">final_state_at</span>
+        </div>
+      </div>
+      <div class="table-card">
+        <h4><span class="dot"></span>Parties &amp; routing</h4>
+        <div class="table-name">payer ↔ payee ↔ PSP</div>
+        <div class="pill-list">
+          <span class="pill">payer_vpa</span>
+          <span class="pill">payee_vpa</span>
+          <span class="pill">payer_handle</span>
+          <span class="pill">payer_ifsc</span>
+          <span class="pill">payee_ifsc</span>
+          <span class="pill">payer_psp</span>
+          <span class="pill">payee_psp</span>
+          <span class="pill">npci_route_id</span>
+        </div>
+      </div>
+      <div class="table-card">
+        <h4><span class="dot"></span>Amount &amp; fees</h4>
+        <div class="table-name">money</div>
+        <div class="pill-list">
+          <span class="pill">amount</span>
+          <span class="pill">currency</span>
+          <span class="pill">convenience_fee</span>
+          <span class="pill">mdr</span>
+          <span class="pill">gst</span>
+        </div>
+      </div>
+      <div class="table-card">
+        <h4><span class="dot"></span>Type &amp; flow</h4>
+        <div class="table-name">how the txn happened</div>
+        <div class="pill-list">
+          <span class="pill">txn_type · P2P / P2M / M2P</span>
+          <span class="pill">flow_type · INTENT / COLLECT / QR</span>
+          <span class="pill">category · LITE / 123PAY / MANDATE</span>
+          <span class="pill">is_offline</span>
+        </div>
+      </div>
+      <div class="table-card">
+        <h4><span class="dot"></span>Status &amp; risk</h4>
+        <div class="table-name">outcome + risk decision</div>
+        <div class="pill-list">
+          <span class="pill key">status</span>
+          <span class="pill">failure_code</span>
+          <span class="pill">failure_reason_text</span>
+          <span class="pill">failed_at_leg</span>
+          <span class="pill">risk_score</span>
+          <span class="pill">risk_decision</span>
+          <span class="pill">device_fp</span>
+        </div>
+      </div>
+    </div>
+
+    <h3>Companion tables</h3>
+    <div class="card-row cols-3">
+      <div class="card">
+        <h4 style="margin-top:0; color:var(--primary)">raw_upi_txn_state_log</h4>
+        <p class="ink-soft" style="font-size:13px; margin:0;">Every state transition with timestamp. One txn = many rows. Used for latency decomposition by leg.</p>
+      </div>
+      <div class="card">
+        <h4 style="margin-top:0; color:var(--primary)">raw_upi_mandates</h4>
+        <p class="ink-soft" style="font-size:13px; margin:0;">AutoPay create / modify / execute / revoke events — the basis for mandate KPIs.</p>
+      </div>
+      <div class="card">
+        <h4 style="margin-top:0; color:var(--primary)">raw_upi_disputes</h4>
+        <p class="ink-soft" style="font-size:13px; margin:0;">Chargebacks &amp; disputes from either side, NPCI dispute ID, resolution status &amp; TAT.</p>
+      </div>
+      <div class="card">
+        <h4 style="margin-top:0; color:var(--primary)">raw_upi_refunds</h4>
+        <p class="ink-soft" style="font-size:13px; margin:0;">Refund txns linked back to the original txn_id — needed for net-GMV and reconciliation.</p>
+      </div>
+      <div class="card">
+        <h4 style="margin-top:0; color:var(--primary)">raw_upi_txn_responses</h4>
+        <p class="ink-soft" style="font-size:13px; margin:0;">Raw API payloads from NPCI &amp; partner banks. JSON. Kept for compliance &amp; audit replay.</p>
+      </div>
+      <div class="card">
+        <h4 style="margin-top:0; color:var(--primary)">+ user / device / consent / referral / app-events</h4>
+        <p class="ink-soft" style="font-size:13px; margin:0;">Identity stitched across many surfaces — login events, clickstream, consent grants, device fingerprints.</p>
+      </div>
+    </div>
+
+    <div class="callout warn">
+      <strong>Scale problem:</strong> at ~10M monthly UPI txns × ~5 state transitions × ~4 raw response payloads,
+      the raw layer alone produces <strong>~200M rows/month <span class="est-pill">EST.</span></strong>
+      Querying this directly is neither cost-effective nor safe — which motivates the semantic layer.
+    </div>
+  </div>
+</section>
+
+<!-- 4. SEMANTIC LAYER -->
+<section id="semantic">
+  <div class="container">
+    <span class="section-tag"><span class="num">4</span>SEMANTIC LAYER</span>
+    <h2 class="section-title">The contract between the messy raw world and any consumer.</h2>
+
+    <!-- ARCHITECTURE DIAGRAM -->
+    <div class="architecture">
+      <div class="arch-title-bar">
+        <span class="at-tag">ARCHITECTURE AT A GLANCE</span>
+        <div class="at-h">The LLM speaks to a governed semantic layer — never to raw tables.</div>
+      </div>
+
+      <div class="arch-tier arch-tier-1">
+        <div class="arch-tier-label"><span class="pin">TIER 1</span>CONSUMPTION SURFACE</div>
+        <div class="arch-tier-body">
+          <div class="arch-block">
+            <div class="a-icon">👤</div>
+            <div class="a-h">Leadership</div>
+            <div class="a-c">"What's our UPI success rate this week?"</div>
+          </div>
+          <div class="arch-mini-arrow">→<span class="lbl">NL</span></div>
+          <div class="arch-block">
+            <div class="a-icon">⚡</div>
+            <div class="a-h">PULSE Agent <span style="opacity:0.6; font-weight:500; font-size:12px;">· single LLM + context bundle</span></div>
+            <div class="a-c">Intent · Route · Plan · Narrate. Each call structurally constrained.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="arch-connector">
+        <div class="arch-connector-line"></div>
+        <div class="arch-connector-label">
+          <strong>STRUCTURED METRIC QUERY · JSON</strong>
+          <span>schema-validated · cannot contain raw SQL</span>
+        </div>
+        <div class="arch-connector-arrow">▼</div>
+      </div>
+
+      <div class="arch-tier arch-tier-2">
+        <div class="arch-tier-label"><span class="pin" style="color:var(--primary)">TIER 2</span>SEMANTIC LAYER · CUBE METRIC SERVER</div>
+        <div class="arch-tier-body">
+          <div class="arch-semantic-grid">
+            <div class="arch-feature">
+              <div class="ic">📐</div>
+              <div class="t">25 governed metrics</div>
+              <div class="d">Each defined as YAML · owned by a steward.</div>
+            </div>
+            <div class="arch-feature">
+              <div class="ic">🔒</div>
+              <div class="t">One definition per concept</div>
+              <div class="d">Same number in chat, dashboard, board deck.</div>
+            </div>
+            <div class="arch-feature">
+              <div class="ic">📜</div>
+              <div class="t">Versioned · audited</div>
+              <div class="d">Every change a PR · every quote replayable.</div>
+            </div>
+            <div class="arch-feature">
+              <div class="ic">⚙️</div>
+              <div class="t">Compiles to SQL</div>
+              <div class="d">Server owns joins · LLM never sees them.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="arch-wall">
+        <div class="wall-bar"></div>
+        <div class="wall-content">
+          <div class="wall-title">⛔ THE WALL · The LLM cannot reach below this line</div>
+          <div class="wall-failures">
+            <span>✗ Inventing columns</span>
+            <span>✗ Wrong joins</span>
+            <span>✗ Redefining business logic</span>
+          </div>
+        </div>
+        <div class="wall-bar"></div>
+      </div>
+
+      <div class="arch-tier arch-tier-3">
+        <div class="arch-tier-label"><span class="pin">TIER 3</span>RAW DATA WAREHOUSE</div>
+        <div class="arch-tier-body">
+          <div class="arch-raw-grid">
+            <div>raw_upi_transactions</div>
+            <div>raw_upi_disputes</div>
+            <div>raw_upi_mandates</div>
+            <div>raw_upi_refunds</div>
+            <div>raw_users</div>
+            <div>raw_user_vpas</div>
+            <div>raw_user_devices</div>
+            <div>raw_banks</div>
+          </div>
+          <div class="arch-raw-meta">
+            <span>~200M rows/month <em>EST.</em></span>
+            <span>Immutable · partitioned by ingestion date</span>
+            <span>Privileged escape hatch — analysts only</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3>Five Semantic Layer rules that make the chatbot trustworthy &amp; less hallucinate</h3>
+    <div class="principles-row">
+      <div class="principle">
+        <div class="pn">1</div>
+        <div class="pt">One metric, one definition</div>
+        <div class="pd">Defined once · change propagates everywhere.</div>
+      </div>
+      <div class="principle">
+        <div class="pn">2</div>
+        <div class="pt">Owned, not orphaned</div>
+        <div class="pd">Steward, SLA, changelog on every metric.</div>
+      </div>
+      <div class="principle">
+        <div class="pn">3</div>
+        <div class="pt">Conformed dimensions</div>
+        <div class="pd">Same <code>bank</code> in every cube.</div>
+      </div>
+      <div class="principle">
+        <div class="pn">4</div>
+        <div class="pt">No raw access for consumers</div>
+        <div class="pd">Raw is a privileged escape hatch.</div>
+      </div>
+      <div class="principle">
+        <div class="pn">5</div>
+        <div class="pt">Metrics as code</div>
+        <div class="pd">KPI definitions live in YAML, version-controlled.</div>
+      </div>
+    </div>
+
+    <h3>The metric catalogue · v1 (25 KPIs at launch)</h3>
+    <div class="card-row cols-2">
+      <div class="card">
+        <h4 style="margin-top:0;">Volume &amp; growth</h4>
+        <div class="pill-list">
+          <span class="pill">upi_txn_count</span>
+          <span class="pill">upi_gmv</span>
+          <span class="pill">upi_avg_ticket_size</span>
+          <span class="pill">mau_upi · dau_upi</span>
+          <span class="pill">new_user_first_txn</span>
+        </div>
+      </div>
+      <div class="card">
+        <h4 style="margin-top:0;">Quality &amp; reliability</h4>
+        <div class="pill-list">
+          <span class="pill">upi_success_rate</span>
+          <span class="pill">upi_failure_rate</span>
+          <span class="pill">technical_decline_rate</span>
+          <span class="pill">txn_latency_p50/p95</span>
+          <span class="pill">issuer_uptime</span>
+        </div>
+      </div>
+      <div class="card">
+        <h4 style="margin-top:0;">Mix &amp; segmentation</h4>
+        <div class="pill-list">
+          <span class="pill">p2m_share · p2p_share</span>
+          <span class="pill">mandate_share</span>
+          <span class="pill">lite_share</span>
+          <span class="pill">qr_dynamic_vs_static</span>
+        </div>
+      </div>
+      <div class="card">
+        <h4 style="margin-top:0;">Risk · disputes · economics</h4>
+        <div class="pill-list">
+          <span class="pill">dispute_rate</span>
+          <span class="pill">fraud_value_rate</span>
+          <span class="pill">chargeback_rate</span>
+          <span class="pill">cost_per_txn · rpau</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 5. LLM AGENT -->
+<section id="agent">
+  <div class="container">
+    <span class="section-tag"><span class="num">5</span>LIVE LLM AGENT</span>
+    <h2 class="section-title">One LLM, given enough context — not a four-agent contraption.</h2>
+    <p class="section-lede">
+      Because the heavy lifting already lives in the semantic layer, the LLM's job shrinks to one thing:
+      translate natural language into a structured query against a known catalogue. That's a single call
+      to <strong>one</strong> capable model (GPT-5.5 or Claude Sonnet) with a context bundle of <code>.md</code>
+      files — the metric catalogue, governance rules, schema notes, and a few canonical examples. Multi-step
+      orchestration buys little when the surface area is already constrained; it just adds latency, cost, and failure modes.
+    </p>
+
+    <a class="live-cta" href="https://chief-builder-officer.github.io/upi-analytics-chatbot/" target="_blank" rel="noopener" style="text-decoration:none; color:inherit;">
+      <div class="cta-icon">⚡</div>
+      <div class="cta-text">
+        <span class="cta-tag"><span class="live-dot"></span>LIVE PROTOTYPE</span>
+        <div class="cta-h">Try the PULSE chat interface — built &amp; deployed</div>
+        <div class="cta-d">A working front-end embodying this strategy. Click any suggested UPI question and watch the trace + result + so-what flow.</div>
+        <div class="cta-url">chief-builder-officer.github.io/upi-analytics-chatbot/</div>
+      </div>
+      <span class="cta-btn">Open prototype →</span>
+    </a>
+
+    <h3>The context bundle handed to the LLM at every call</h3>
+    <div class="context-bundle">
+      <div class="cb-llm">
+        <div class="cb-llm-icon">🧠</div>
+        <div class="cb-llm-name">Single LLM</div>
+        <div class="cb-llm-sub">GPT-5.5 / Claude Sonnet · one call per question</div>
+      </div>
+      <div class="cb-arrow">←</div>
+      <div class="cb-context">
+        <div class="cb-tag">CONTEXT (.md files)</div>
+        <div class="cb-files">
+          <div class="cb-file"><span class="cb-ext">.md</span><div><b>metric_catalogue</b><br/><span>25 KPIs · YAML · names, descriptions, dims</span></div></div>
+          <div class="cb-file"><span class="cb-ext">.md</span><div><b>governance_rules</b><br/><span>What to refuse · what to clarify · access policy</span></div></div>
+          <div class="cb-file"><span class="cb-ext">.md</span><div><b>schema_notes</b><br/><span>Conformed dim joins · safe columns · row caps</span></div></div>
+          <div class="cb-file"><span class="cb-ext">.md</span><div><b>examples</b><br/><span>10 canonical Q→query mappings as few-shot</span></div></div>
+        </div>
+      </div>
+    </div>
+    <p class="ink-soft" style="font-size: 13px; margin-top: -4px;">
+      The bundle is small (~10–15k tokens), regenerated whenever the metric catalogue changes, and shipped
+      as a versioned artifact. The LLM gets one prompt, returns one structured query, the metric server runs
+      it. End of loop.
+    </p>
+
+    <h3>Why a single, well-contexted LLM is structurally safer than text-to-SQL</h3>
+    <table class="pulse-table">
+      <thead><tr>
+        <th style="width:25%">FAILURE MODE</th>
+        <th style="width:35%">WHY VANILLA TEXT-TO-SQL FAILS</th>
+        <th>HOW THE CONTEXT BUNDLE PREVENTS IT</th>
+      </tr></thead>
+      <tbody>
+        <tr><td><strong>Inventing columns</strong></td>
+            <td>Model hallucinates schema it never saw</td>
+            <td>Catalogue is the only schema the LLM is shown — anything outside it is by definition off-limits.</td></tr>
+        <tr><td><strong>Wrong joins</strong></td>
+            <td>Model stitches tables based on naming heuristics</td>
+            <td>Metric server owns the joins. The LLM emits a structured metric query, not raw SQL.</td></tr>
+        <tr><td><strong>Redefining business logic</strong></td>
+            <td>"Success rate" gets reinvented at every query</td>
+            <td>Every definition is in the catalogue, signed off, version-tagged. LLM picks one — never invents.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>What PULSE will <em>not</em> do</h3>
+    <div class="wont-grid">
+      <div class="wont">
+        <div class="x">✕</div>
+        <div class="t">No raw SQL</div>
+        <div class="d">If the question doesn't map to a defined metric, it's not answered with invented logic.</div>
+      </div>
+      <div class="wont">
+        <div class="x">✕</div>
+        <div class="t">No predictions in v1</div>
+        <div class="d">Forecasting needs its own governance. We earn that surface later.</div>
+      </div>
+      <div class="wont">
+        <div class="x">✕</div>
+        <div class="t">No write actions</div>
+        <div class="d">Read-only. No "block this VPA" via chat. Different system, different blast radius.</div>
+      </div>
+      <div class="wont">
+        <div class="x">✕</div>
+        <div class="t">No PII in answers</div>
+        <div class="d">PII tokenised at the cleaned layer. PULSE returns aggregates only.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 6. GOVERNANCE -->
+<section id="governance">
+  <div class="container">
+    <span class="section-tag"><span class="num">6</span>GOVERNANCE · TRUST · GUARDRAILS</span>
+    <h2 class="section-title">Numbers come from the metric server. The LLM is prompted to <em>quote, not paraphrase.</em></h2>
+
+    <div class="card-row cols-2">
+      <div class="card">
+        <h4 style="margin-top:0">🔐 Access control</h4>
+        <p style="font-size:13.5px; margin-bottom:0;">RBAC at the <strong>metric level</strong>, not the app level. Founder sees everything; a P2P business
+        head sees P2P metrics only. Enforced by the metric server — not the LLM.</p>
+      </div>
+      <div class="card">
+        <h4 style="margin-top:0">🛡️ PII &amp; compliance</h4>
+        <p style="font-size:13.5px; margin-bottom:0;">All PII tokenised at the cleaned layer. Conversation logs themselves are PII —
+        90-day retention with right-to-erasure.</p>
+      </div>
+      <div class="card">
+        <h4 style="margin-top:0">💰 Cost &amp; freshness</h4>
+        <p style="font-size:13.5px; margin-bottom:0;">Every answer carries a freshness timestamp. Per-user daily spend caps; heavy queries auto-routed to a batch tier with "we'll email you" UX.</p>
+      </div>
+      <div class="card">
+        <h4 style="margin-top:0">📜 Audit-grade replay</h4>
+        <p style="font-size:13.5px; margin-bottom:0;">Every conversation, every quoted number, every compiled query logged with a <code>trace_id</code>.
+        A leader can replay "what did PULSE tell my team last Tuesday?" exactly.</p>
+      </div>
+    </div>
+
+    <h3>How we know it's working</h3>
+    <p>
+      A 200-question evaluation set runs nightly against a held-out warehouse snapshot, grading the agent on
+      routing correctness, numerical accuracy, and refusal behaviour.
+      <strong>GA bar: ≥ 90% accuracy on real questions, ≥ 95% refusal-correct on adversarial probes.</strong>
+      Every PR to the agent triggers a smoke-eval before merge — no prompt change ships on vibes.
+    </p>
+
+    <h3>When the agent isn't sure</h3>
+    <p>An honest "I don't know" beats a confident wrong answer. Three fallback states. None is "answer anyway."</p>
+    <div class="fallback-flow">
+      <div class="fb-step">
+        <div class="fb-num">1</div>
+        <div class="fb-cond">WHEN · Ambiguous question or entity</div>
+        <div class="fb-action">Ask a clarifying question</div>
+        <div class="fb-d">"HDFC as payer or payee?" — 2–3 disambiguation chips. Healthy rate: 10–20% of questions.</div>
+      </div>
+      <div class="fb-step warn">
+        <div class="fb-num">2</div>
+        <div class="fb-cond">WHEN · No governed metric covers the question</div>
+        <div class="fb-action">Honest "not yet" + ticket</div>
+        <div class="fb-d">Suggest the closest catalogue metrics; offer a one-click request to the metric stewards.</div>
+      </div>
+      <div class="fb-step bad">
+        <div class="fb-num">3</div>
+        <div class="fb-cond">WHEN · System error / access denied</div>
+        <div class="fb-action">Route to analytics on-call</div>
+        <div class="fb-d">Pre-fills a Slack / Linear ticket with the question and trace_id. Median resolution &lt; 4 working hours.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 7. ROADMAP -->
+<section id="roadmap">
+  <div class="container">
+    <span class="section-tag"><span class="num">7</span>BUILD PLAN · 90-DAY ROADMAP</span>
+    <h2 class="section-title">Five phases. Five clean definitions of done.</h2>
+
+    <div class="timeline">
+      <div class="tl-row">
+        <div class="tl-card">
+          <div><span class="tl-phase">PHASE 0 · FOUNDATION</span><div class="tl-weeks">Weeks 1–2</div></div>
+          <div>
+            <div class="tl-title">Metric stewardship operating model · first 10 KPIs locked</div>
+            <div class="tl-dod">DoD: metric YAML schema agreed; 10 metrics signed off by VPs.</div>
+          </div>
+          <span class="badge low">Foundation</span>
+        </div>
+      </div>
+      <div class="tl-row">
+        <div class="tl-card">
+          <div><span class="tl-phase">PHASE 1 · CLEANED LAYER</span><div class="tl-weeks">Weeks 3–6</div></div>
+          <div>
+            <div class="tl-title">dbt project covering txn / user / bank / merchant marts</div>
+            <div class="tl-dod">DoD: marts pass tests; replace 5 legacy dashboards.</div>
+          </div>
+          <span class="badge low">Build</span>
+        </div>
+      </div>
+      <div class="tl-row">
+        <div class="tl-card">
+          <div><span class="tl-phase">PHASE 2 · METRIC SERVER</span><div class="tl-weeks">Weeks 5–8</div></div>
+          <div>
+            <div class="tl-title">Cube layer live · v1 catalogue (25 metrics)</div>
+            <div class="tl-dod">DoD: programmatic API working; auth integrated.</div>
+          </div>
+          <span class="badge low">Build</span>
+        </div>
+      </div>
+      <div class="tl-row">
+        <div class="tl-card">
+          <div><span class="tl-phase">PHASE 3 · AGENT v1</span><div class="tl-weeks">Weeks 7–10</div></div>
+          <div>
+            <div class="tl-title">Single LLM + context bundle · eval harness wired</div>
+            <div class="tl-dod">DoD: 80% accuracy on 200-question eval set.</div>
+          </div>
+          <span class="badge med">Calibrate</span>
+        </div>
+      </div>
+      <div class="tl-row">
+        <div class="tl-card">
+          <div><span class="tl-phase">PHASE 4 · PILOT</span><div class="tl-weeks">Weeks 9–12</div></div>
+          <div>
+            <div class="tl-title">20 leadership users · daily usage telemetry</div>
+            <div class="tl-dod">DoD: NPS ≥ 40, ≥ 5 questions/user/week, &lt; 2s P95 first-token.</div>
+          </div>
+          <span class="badge med">Validate</span>
+        </div>
+      </div>
+      <div class="tl-row">
+        <div class="tl-card">
+          <div><span class="tl-phase">PHASE 5 · GA</span><div class="tl-weeks">Week 12+</div></div>
+          <div>
+            <div class="tl-title">Open to all PMs, business heads, analysts</div>
+            <div class="tl-dod">DoD: all UPI metrics in catalogue; on-call rotation live.</div>
+          </div>
+          <span class="badge high">Scale</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout good">
+      <strong>Team needed:</strong> 2 data engineers (build &amp; maintain the metric layer + cleaned marts), 1 backend engineer (LLM integration, prompt + context bundle, RAG retrieval), 1 data PM (catalogue stewardship). Director (this role) leads end-to-end. <em>No dedicated ML engineer</em> — with a single LLM and a curated context bundle, this is application engineering, not model training.
+    </div>
+  </div>
+</section>
+
+<!-- 8. SUCCESS METRICS -->
+<section id="metrics">
+  <div class="container">
+    <span class="section-tag"><span class="num">8</span>SUCCESS METRICS FOR PULSE ITSELF</span>
+    <h2 class="section-title">A north-star, plus the operational and quality KPIs that move it.</h2>
+
+    <div class="north">
+      <div class="lbl">NORTH-STAR METRIC</div>
+      <div class="star">Median time-to-answer for a leadership analytics question.</div>
+      <div class="compare">
+        <div>
+          <div class="lab">TODAY <span class="est-pill" style="background:rgba(255,255,255,0.15); color:rgba(255,255,255,0.85); border-color:rgba(255,255,255,0.25);">EST.</span></div>
+          <div class="v">~4 hours</div>
+          <div style="font-size:12px; opacity:0.65; margin-top:4px;">Slack → analyst → query → response</div>
+        </div>
+        <div class="arrow-big">→</div>
+        <div>
+          <div class="lab">MONTH 6 TARGET</div>
+          <div class="v">&lt; 90 seconds</div>
+          <div style="font-size:12px; opacity:0.65; margin-top:4px;">Direct via PULSE, no analyst hop</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi"><div class="v">80%</div><div class="l">Weekly active leaders (VP+)</div><div class="target">ADOPTION · target by week 8</div></div>
+      <div class="kpi"><div class="v">8</div><div class="l">Questions per active user per week</div><div class="target">ADOPTION · healthy engagement</div></div>
+      <div class="kpi"><div class="v">75%</div><div class="l">Questions answered without analyst hop</div><div class="target">ADOPTION · capacity multiplier</div></div>
+      <div class="kpi"><div class="v">10–20%</div><div class="l">Clarifying-question rate</div><div class="target">QUALITY · low = hallucinating, high = gaps</div></div>
+      <div class="kpi"><div class="v">&lt; ₹15</div><div class="l">Cost per question</div><div class="target">COST · single LLM call · context cached</div></div>
+      <div class="kpi"><div class="v">→ 0</div><div class="l">"Definition disputes" per quarter</div><div class="target">STRATEGIC · the whole point</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 9. RISKS -->
+<section id="risks">
+  <div class="container">
+    <span class="section-tag"><span class="num">9</span>RISKS &amp; MITIGATIONS</span>
+    <h2 class="section-title">Risks I'm watching — and how the design defuses each.</h2>
+
+    <table class="pulse-table">
+      <thead><tr>
+        <th>RISK</th><th style="width:8%">SEVERITY</th><th>MITIGATION</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+          <td>Leadership trusts a wrong number; bad decision is made</td>
+          <td><span class="badge high">HIGH</span></td>
+          <td>Numerical-drift evals daily; numbers always quoted with metric definition + freshness timestamp.</td>
+        </tr>
+        <tr>
+          <td>Catalogue grows slower than questions arrive; users abandon</td>
+          <td><span class="badge high">HIGH</span></td>
+          <td>Dedicated data PM; "request a metric" flow turns gaps into tickets.</td>
+        </tr>
+        <tr>
+          <td>LLM costs balloon at scale</td>
+          <td><span class="badge med">MED</span></td>
+          <td>Haiku for routing, Sonnet for narrating; result caching; per-user caps.</td>
+        </tr>
+        <tr>
+          <td>RBI / NPCI compliance audit on a quoted number</td>
+          <td><span class="badge high">HIGH</span></td>
+          <td>Every answer carries trace_id, metric version, source query — full replay available.</td>
+        </tr>
+        <tr>
+          <td>Internal conflict — "my dashboard says different"</td>
+          <td><span class="badge med">MED</span></td>
+          <td>Make PULSE the source of truth; deprecate conflicting dashboards on a schedule.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- APPENDICES -->
+<section id="close">
+  <div class="container">
+    <span class="section-tag" style="background:var(--bg-soft); color:var(--ink-muted);">APPENDICES &amp; COMPANIONS</span>
+    <h2 class="section-title">What lives alongside this document.</h2>
+
+    <div class="appendix">
+      <div class="appx">
+        <div class="name">02_Sample_UPI_Database.sql</div>
+        <div class="title">Sample UPI Database</div>
+        <div class="d">DDL + seed data for raw + semantic layers. SQLite-compatible, loads end-to-end.</div>
+      </div>
+      <a class="appx" href="https://chief-builder-officer.github.io/upi-analytics-chatbot/" target="_blank" rel="noopener" style="text-decoration:none; color:inherit; display:block;">
+        <div class="name" style="color: var(--accent);">⚡ LIVE · DEPLOYED</div>
+        <div class="title">PULSE Chat Prototype</div>
+        <div class="d">Try the deployed chat experience — chief-builder-officer.github.io/upi-analytics-chatbot/</div>
+      </a>
+      <div class="appx">
+        <div class="name">04_Metric_Catalogue_v1.yaml</div>
+        <div class="title">v1 Metric Catalogue</div>
+        <div class="d">First 25 KPIs as YAML — owner, SLA, lineage, version, access groups.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="container">
+    <div class="closing-quote">
+      The discipline of one definition per metric — owned, versioned, audited — is the data foundation
+      a payments business at our stage requires.
+      <em>PULSE turns that discipline into a daily-use surface, and that's where its leverage compounds.</em>
+    </div>
+    <div class="meta">PULSE · Mobikwik UPI Analytics Agent · Strategy v1 · May 2026</div>
+    <div class="meta" style="margin-top:-4px; opacity:0.4">Varun Rustagi · rustagi.varun@gmail.com</div>
+  </div>
+</footer>
+
+<script>
+  // Disable browser scroll restoration so reloads / re-openings always start at top of page
+  if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+
+  // Smooth anchor scroll on click
+  document.querySelectorAll('.top-nav a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+      const target = document.querySelector(a.getAttribute('href'));
+      if (target) { e.preventDefault(); target.scrollIntoView({ behavior:'smooth', block:'start' }); }
+    });
+  });
+
+  // Active section highlight in sticky top nav
+  (function () {
+    const sections = Array.from(document.querySelectorAll('section[id]'));
+    const navLinks = Array.from(document.querySelectorAll('.top-nav a[href^="#"]'));
+    const navInner = document.querySelector('.top-nav-inner');
+    if (!sections.length || !navLinks.length) return;
+    const navMap = new Map();
+    navLinks.forEach(l => navMap.set(l.getAttribute('href').slice(1), l));
+
+    // Center the active link inside the horizontal nav WITHOUT touching page scroll.
+    // (Earlier version used .scrollIntoView() — that dragged the whole page down on load.)
+    function centerLinkInNav(link) {
+      if (!navInner) return;
+      const linkRect = link.getBoundingClientRect();
+      const navRect  = navInner.getBoundingClientRect();
+      const offset   = (linkRect.left - navRect.left) - (navRect.width / 2 - linkRect.width / 2);
+      navInner.scrollTo({ left: navInner.scrollLeft + offset, behavior: 'smooth' });
+    }
+
+    function setActive(id) {
+      navLinks.forEach(l => l.classList.remove('active'));
+      const link = navMap.get(id);
+      if (link) {
+        link.classList.add('active');
+        centerLinkInNav(link);
+      }
+    }
+
+    function onScroll() {
+      const navH = document.querySelector('.top-nav').offsetHeight || 0;
+      const probeY = window.scrollY + navH + 80;
+      let current = sections[0].id;
+      for (const s of sections) {
+        if (s.offsetTop <= probeY) current = s.id;
+        else break;
+      }
+      setActive(current);
+    }
+
+    let ticking = false;
+    window.addEventListener('scroll', () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => { onScroll(); ticking = false; });
+        ticking = true;
+      }
+    }, { passive: true });
+
+    // On every load, force top-of-page first, then run the highlight.
+    window.addEventListener('load', () => {
+      window.scrollTo(0, 0);
+      onScroll();
+    });
+    // Fire immediately too, in case `load` already happened (script at end of body).
+    onScroll();
+  })();
+</script>
+
+</body>
+</html>
